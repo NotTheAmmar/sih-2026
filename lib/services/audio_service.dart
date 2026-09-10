@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../config/constants.dart';
 
@@ -31,17 +32,19 @@ class AudioService {
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) throw Exception('Microphone permission denied');
 
-    final tempDir = await getTemporaryDirectory();
-    final path =
-        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    String? path;
+    if (!kIsWeb) {
+      final tempDir = await getTemporaryDirectory();
+      path = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    }
 
     await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
+      RecordConfig(
+        encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc,
         sampleRate: AppConstants.audioSampleRate,
         numChannels: 1,
       ),
-      path: path,
+      path: path ?? '',
     );
 
     _isRecording = true;
@@ -69,7 +72,8 @@ class AudioService {
   // ── Playback ─────────────────────────────────────────────────────────────
 
   Future<void> playFile(String path) async {
-    await _player.play(DeviceFileSource(path));
+    final source = kIsWeb ? UrlSource(path) : DeviceFileSource(path);
+    await _player.play(source);
   }
 
   Future<void> stopPlayback() async {

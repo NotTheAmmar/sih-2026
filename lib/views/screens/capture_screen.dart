@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
@@ -190,10 +191,9 @@ class _PreviewOverlay extends StatelessWidget {
         children: [
           // Captured image
           if (ctrl.capturedImagePath != null)
-            Image.file(
-              File(ctrl.capturedImagePath!),
-              fit: BoxFit.cover,
-            ),
+            kIsWeb 
+                ? Image.network(ctrl.capturedImagePath!, fit: BoxFit.cover)
+                : Image.file(File(ctrl.capturedImagePath!), fit: BoxFit.cover),
 
           // Bottom action row
           Positioned(

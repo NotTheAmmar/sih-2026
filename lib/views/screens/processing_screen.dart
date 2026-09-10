@@ -56,7 +56,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                 horizontal: AppSpacing.screenH,
                 vertical: AppSpacing.screenV,
               ),
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // ── Shimmer spinner ───────────────────────────────────
@@ -123,6 +124,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                     ),
                   ],
                 ],
+              ),
               ),
             ),
           ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../config/theme.dart';
 
 class BeforeAfterToggle extends StatelessWidget {
@@ -65,6 +66,8 @@ class BeforeAfterToggle extends StatelessWidget {
     );
   }
 
+  static const _tunnelHeaders = {'bypass-tunnel-reminder': 'true'};
+
   Widget _buildImage(bool studio) {
     final path = studio ? studioImagePath : rawImagePath;
     if (path == null) {
@@ -73,6 +76,24 @@ class BeforeAfterToggle extends StatelessWidget {
         child: const Center(child: Icon(Icons.image_outlined, size: 48)),
       );
     }
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        key: ValueKey(path),
+        fit: BoxFit.cover,
+        headers: _tunnelHeaders,
+      );
+    }
+
+    if (kIsWeb) {
+      return Image.network(
+        path,
+        key: ValueKey(path),
+        fit: BoxFit.cover,
+        headers: _tunnelHeaders,
+      );
+    }
+
     return Image.file(
       File(path),
       key: ValueKey(path),

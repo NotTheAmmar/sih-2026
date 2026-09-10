@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
 import '../models/craft_attributes.dart';
 import '../models/pricing_corridor.dart';
@@ -170,11 +171,18 @@ class LiveApiService implements ApiService {
 
   /// POST audio to Groq Whisper-Large-v3 → returns Hindi transcript string.
   Future<String> _transcribeWithGroq(String audioPath) async {
-    final bytes = await File(audioPath).readAsBytes();
+    late final List<int> bytes;
+    if (kIsWeb) {
+      final res = await http.get(Uri.parse(audioPath));
+      bytes = res.bodyBytes;
+    } else {
+      bytes = await File(audioPath).readAsBytes();
+    }
 
     // Determine content-type from extension
-    final ext = audioPath.split('.').last.toLowerCase();
+    final ext = kIsWeb ? 'webm' : audioPath.split('.').last.toLowerCase();
     final mimeType = ext == 'wav' ? MediaType('audio', 'wav')
+        : ext == 'webm' ? MediaType('audio', 'webm')
         : ext == 'mp4' ? MediaType('audio', 'mp4')
         : MediaType('audio', 'm4a'); // default AAC
 
@@ -295,8 +303,17 @@ class LiveApiService implements ApiService {
 
     final request = http.MultipartRequest('POST', uri)
       ..fields['language'] = 'hi-IN'
-      ..files.add(await http.MultipartFile.fromPath('image', imagePath))
-      ..files.add(await http.MultipartFile.fromPath('audio', audioPath));
+      ..headers['bypass-tunnel-reminder'] = 'true';
+
+    if (kIsWeb) {
+      final imgRes = await http.get(Uri.parse(imagePath));
+      final audioRes = await http.get(Uri.parse(audioPath));
+      request.files.add(http.MultipartFile.fromBytes('image', imgRes.bodyBytes, filename: 'image.jpg'));
+      request.files.add(http.MultipartFile.fromBytes('audio', audioRes.bodyBytes, filename: 'audio.webm'));
+    } else {
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      request.files.add(await http.MultipartFile.fromPath('audio', audioPath));
+    }
 
     // Optional Bhashini auth header for Path 2
     if (AppConstants.bhashiniApiKey.isNotEmpty) {
@@ -324,34 +341,37 @@ class LiveApiService implements ApiService {
 
     final pricingMap = j['pricing'] as Map<String, dynamic>? ?? {};
 
-    return CatalogProcessResult(
-      titleEn: j['title_en'] as String?,
-      titleHi: j['title_hi'] as String?,
-      descriptionEn: j['description_en'] as String?,
-      descriptionHi: j['description_hi'] as String?,
-      craftAttributes: CraftAttributes(
-        category: j['craft_category'] as String?,
-        materials: materialsList,
-        laborDays: _parseInt(pricingMap['labor_days']),
-        clusterLocation: j['cluster_location'] as String?,
-      ),
-      pricing: pricingMap.isNotEmpty
-          ? PricingCorridor(
-              rawMaterialCost: _parseInt(pricingMap['raw_material_cost']) ?? 500,
-              laborDays: _parseInt(pricingMap['labor_days']) ?? 3,
-              dailyWageRate:
-                  _parseInt(pricingMap['daily_wage_rate']) ??
-                  AppConstants.defaultDailyWageRate,
-              overheadPercent: (pricingMap['overhead_percent'] as num?)
-                      ?.toDouble() ??
-                  AppConstants.overheadPercent,
-              floorPrice: _parseInt(pricingMap['floor_price']) ?? 0,
-              fairPrice: _parseInt(pricingMap['fair_price']) ?? 0,
-              premiumPrice: _parseInt(pricingMap['premium_price']) ?? 0,
-            )
-          : null,
-      studioImagePath: j['studio_image_url'] as String?,
-    );
+      final rawStudioUrl = j['studio_image_url'] as String?;
+      final fullStudioUrl = rawStudioUrl != null ? '${AppConstants.backendUrl}$rawStudioUrl' : null;
+
+      return CatalogProcessResult(
+        titleEn: j['title_en'] as String?,
+        titleHi: j['title_hi'] as String?,
+        descriptionEn: j['description_en'] as String?,
+        descriptionHi: j['description_hi'] as String?,
+        craftAttributes: CraftAttributes(
+          category: j['craft_category'] as String?,
+          materials: materialsList,
+          laborDays: _parseInt(pricingMap['labor_days']),
+          clusterLocation: j['cluster_location'] as String?,
+        ),
+        pricing: pricingMap.isNotEmpty
+            ? PricingCorridor(
+                rawMaterialCost: _parseInt(pricingMap['raw_material_cost']) ?? 500,
+                laborDays: _parseInt(pricingMap['labor_days']) ?? 3,
+                dailyWageRate:
+                    _parseInt(pricingMap['daily_wage_rate']) ??
+                    AppConstants.defaultDailyWageRate,
+                overheadPercent: (pricingMap['overhead_percent'] as num?)
+                        ?.toDouble() ??
+                    AppConstants.overheadPercent,
+                floorPrice: _parseInt(pricingMap['floor_price']) ?? 0,
+                fairPrice: _parseInt(pricingMap['fair_price']) ?? 0,
+                premiumPrice: _parseInt(pricingMap['premium_price']) ?? 0,
+              )
+            : null,
+        studioImagePath: fullStudioUrl,
+      );
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────

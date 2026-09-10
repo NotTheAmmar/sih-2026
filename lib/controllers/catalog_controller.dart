@@ -52,9 +52,6 @@ class CatalogController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Run studio image compositing in parallel while API call happens
-      final studioFuture = _imageService.createStudioImage(imagePath);
-
       final result = await _apiService.processCatalog(
         imagePath: imagePath,
         audioPath: audioPath,
@@ -71,13 +68,11 @@ class CatalogController extends ChangeNotifier {
         },
       );
 
-      final studioPath = await studioFuture;
-
       _currentItem = CatalogItem(
         id: const Uuid().v4(),
         createdAt: DateTime.now(),
         rawImagePath: imagePath,
-        studioImagePath: studioPath,
+        studioImagePath: result.studioImagePath,
         audioPath: audioPath,
         titleEn: result.titleEn,
         titleHi: result.titleHi,

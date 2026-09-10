@@ -8,7 +8,7 @@ class AppConstants {
       dotenv.env['API_BASE_URL'] ?? 'https://api.kalakriti.dev/v1';
   static bool get useMockData =>
       (dotenv.env['USE_MOCK_DATA'] ?? 'true').toLowerCase() == 'true';
-  static Duration get apiTimeout => const Duration(seconds: 30);
+  static Duration get apiTimeout => const Duration(seconds: 120);
 
   // Gemini
   static String get geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';

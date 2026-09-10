@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
@@ -23,7 +24,8 @@ class VoiceScreen extends StatelessWidget {
                 horizontal: AppSpacing.screenH,
                 vertical: AppSpacing.screenV,
               ),
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 children: [
                   // ── Top bar ───────────────────────────────────────────
                   Row(
@@ -49,12 +51,19 @@ class VoiceScreen extends StatelessWidget {
                     ClipRRect(
                       borderRadius:
                           BorderRadius.circular(AppSpacing.radiusMd),
-                      child: Image.file(
-                        File(captureCtrl.capturedImagePath!),
-                        height: 120,
-                        width: 120,
-                        fit: BoxFit.cover,
-                      ),
+                      child: kIsWeb
+                          ? Image.network(
+                              captureCtrl.capturedImagePath!,
+                              height: 120,
+                              width: 120,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(captureCtrl.capturedImagePath!),
+                              height: 120,
+                              width: 120,
+                              fit: BoxFit.cover,
+                            ),
                     ),
                   const SizedBox(height: AppSpacing.lg),
 
@@ -118,7 +127,7 @@ class VoiceScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const Spacer(),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // ── Proceed button (after recording stops) ────────────
                   AnimatedOpacity(
@@ -137,6 +146,7 @@ class VoiceScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),
