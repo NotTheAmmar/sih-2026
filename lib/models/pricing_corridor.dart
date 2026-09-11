@@ -3,6 +3,8 @@ import '../config/constants.dart';
 class PricingCorridor {
   final int rawMaterialCost; // ₹ — Mraw
   final int laborDays; // Tdays
+  final int itemsProduced;
+  final int sellerProposedPrice;
   final int dailyWageRate; // ₹/day — Wartisan (₹450–600)
   final double overheadPercent; // e.g. 0.10 for 10%
 
@@ -14,6 +16,8 @@ class PricingCorridor {
   const PricingCorridor({
     required this.rawMaterialCost,
     required this.laborDays,
+    required this.itemsProduced,
+    required this.sellerProposedPrice,
     required this.dailyWageRate,
     required this.overheadPercent,
     required this.floorPrice,
@@ -29,19 +33,27 @@ class PricingCorridor {
   factory PricingCorridor.compute({
     required int rawMaterialCost,
     required int laborDays,
+    int itemsProduced = 1,
+    int sellerProposedPrice = 0,
     int dailyWageRate = AppConstants.defaultDailyWageRate,
     double overheadPercent = AppConstants.overheadPercent,
   }) {
     final laborCost = laborDays * dailyWageRate;
     final subtotal = rawMaterialCost + laborCost;
     final overhead = (subtotal * overheadPercent).round();
-    final floor = subtotal + overhead;
+    final totalFloor = subtotal + overhead;
+    
+    // Divide by items produced (ensure no divide-by-zero)
+    final qty = itemsProduced > 0 ? itemsProduced : 1;
+    final floor = (totalFloor / qty).round();
     final fair = (floor * AppConstants.fairPriceMultiplier).round();
     final premium = (fair * AppConstants.premiumPriceMultiplier).round();
 
     return PricingCorridor(
       rawMaterialCost: rawMaterialCost,
       laborDays: laborDays,
+      itemsProduced: itemsProduced,
+      sellerProposedPrice: sellerProposedPrice,
       dailyWageRate: dailyWageRate,
       overheadPercent: overheadPercent,
       floorPrice: floor,
@@ -53,6 +65,8 @@ class PricingCorridor {
   PricingCorridor copyWith({
     int? rawMaterialCost,
     int? laborDays,
+    int? itemsProduced,
+    int? sellerProposedPrice,
     int? dailyWageRate,
     double? overheadPercent,
     int? floorPrice,
@@ -62,6 +76,8 @@ class PricingCorridor {
     return PricingCorridor(
       rawMaterialCost: rawMaterialCost ?? this.rawMaterialCost,
       laborDays: laborDays ?? this.laborDays,
+      itemsProduced: itemsProduced ?? this.itemsProduced,
+      sellerProposedPrice: sellerProposedPrice ?? this.sellerProposedPrice,
       dailyWageRate: dailyWageRate ?? this.dailyWageRate,
       overheadPercent: overheadPercent ?? this.overheadPercent,
       floorPrice: floorPrice ?? this.floorPrice,
@@ -73,6 +89,8 @@ class PricingCorridor {
   Map<String, dynamic> toJson() => {
         'rawMaterialCost': rawMaterialCost,
         'laborDays': laborDays,
+        'itemsProduced': itemsProduced,
+        'sellerProposedPrice': sellerProposedPrice,
         'dailyWageRate': dailyWageRate,
         'overheadPercent': overheadPercent,
         'floorPrice': floorPrice,
@@ -84,6 +102,8 @@ class PricingCorridor {
       PricingCorridor(
         rawMaterialCost: json['rawMaterialCost'] as int,
         laborDays: json['laborDays'] as int,
+        itemsProduced: json['itemsProduced'] as int? ?? 1,
+        sellerProposedPrice: json['sellerProposedPrice'] as int? ?? 0,
         dailyWageRate: json['dailyWageRate'] as int,
         overheadPercent: (json['overheadPercent'] as num).toDouble(),
         floorPrice: json['floorPrice'] as int,

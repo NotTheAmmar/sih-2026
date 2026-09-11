@@ -35,8 +35,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             context.read<PricingController>().seedFromExtracted(
-              rawMaterialCost: item.pricing?.rawMaterialCost ?? 500,
-              laborDays: item.craftAttributes?.laborDays ?? 3,
+              rawMaterialCost: item.pricing?.rawMaterialCost ?? 0,
+              laborDays: item.pricing?.laborDays ?? 0,
+              itemsProduced: item.pricing?.itemsProduced ?? 1,
+              sellerProposedPrice: item.pricing?.sellerProposedPrice ?? 0,
             );
           }
         });
@@ -184,6 +186,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           onIncrement: pricingCtrl.incrementLaborDays,
                           onDecrement: pricingCtrl.decrementLaborDays,
                         ),
+                        const SizedBox(height: AppSpacing.sm),
+                        StepperInput(
+                          label: 'Items in Set / कुल मात्रा',
+                          unit: 'items',
+                          value: pricingCtrl.itemsProduced,
+                          onIncrement: pricingCtrl.incrementItemsProduced,
+                          onDecrement: pricingCtrl.decrementItemsProduced,
+                        ),
                         const SizedBox(height: AppSpacing.lg),
 
                         // ── Price gauge ────────────────────────────────
@@ -192,6 +202,52 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           fairPrice: pricing.fairPrice,
                           premiumPrice: pricing.premiumPrice,
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                        if (pricingCtrl.sellerProposedPrice > 0)
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                  ? AppColors.priceFloor.withOpacity(0.1)
+                                  : AppColors.actionGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                    ? AppColors.priceFloor
+                                    : AppColors.actionGreen,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                  color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                      ? AppColors.priceFloor
+                                      : AppColors.actionGreen,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '⚡ ONDC Market Comparison',
+                                        style: AppTextStyles.label,
+                                      ),
+                                      Text(
+                                        pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                            ? 'Your price (₹${pricingCtrl.sellerProposedPrice}) is below market floor! You may be underpricing your work.'
+                                            : 'Your price (₹${pricingCtrl.sellerProposedPrice}) is highly competitive in the current ONDC market.',
+                                        style: AppTextStyles.caption,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: AppSpacing.xl),
 
                         // Description (collapsed preview)
