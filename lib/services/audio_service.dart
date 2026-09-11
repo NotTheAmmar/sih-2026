@@ -102,6 +102,12 @@ class AudioService {
   }
 
   /// Speak an error / warning prompt in Hindi
+  Future<void> speakText(String hindiText) async {
+    await initTts();
+    await _tts.speak(hindiText);
+  }
+
+  /// Speak an error / warning prompt in Hindi
   Future<void> speakWarning(String hindiText) async {
     await initTts();
     await _tts.speak(hindiText);
@@ -129,7 +135,7 @@ class AudioService {
     if (fairPrice != null) {
       parts.add('इसकी अनुशंसित बाज़ार कीमत $fairPrice रुपये है।');
     }
-    parts.add('क्या आप इसे ONDC पर प्रकाशित करना चाहते हैं?');
+    parts.add('धन्यवाद।');
     return parts.join(' ');
   }
 }

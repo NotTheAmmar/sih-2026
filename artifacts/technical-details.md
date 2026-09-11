@@ -175,9 +175,8 @@ class CatalogItem {
   final String? descriptionHi;
 
   // Craft attributes
-  final String? craftCategory;      // e.g., "Handloom Silk Sarees"
-  final List<String> materials;     // e.g., ["Pure Silk", "Gold Zari"]
-  final int? laborDays;
+  final CraftAttributes? craftAttributes;
+  final int availableQuantity;
 
   // Pricing
   final PricingCorridor? pricing;
@@ -198,6 +197,7 @@ class PricingCorridor {
   final int rawMaterialCost;
   final int laborDays;
   final int dailyWageRate;          // ₹450–600/day
+  final double skillMultiplier;     // 1.0 to 1.5 based on artisan mastery
   final double overheadPercent;     // ~10%
 }
 ```
@@ -579,13 +579,21 @@ A single-glance reference of every technology used across the client and backend
 | Vision AI | BiRefNet (ONNX INT8) | Edge / Server | Background removal for studio compositing |
 | Pricing (Phase 2) | XGBoost + CLIP ViT-B/32 | Server | Multimodal fair-price regression |
 
-### 18.3 Backend (Phase 2)
+### 18.3 Backend — KalaKriti BPP (Implemented)
+
+> See [`artifacts/backend-quickstart.md`](file:///home/ammar/Programs/Flutter/sih_26_kalakriti/artifacts/backend-quickstart.md) for setup and run instructions.
 
 | Layer | Technology | Version | Purpose |
 |---|---|---|---|
-| API Framework | FastAPI | Latest | Async REST endpoints |
+| API Framework | FastAPI | ≥0.115.0 | Async REST + Beckn protocol webhooks |
 | Runtime | Python | 3.11+ | Backend language |
-| ML Framework | PyTorch + Transformers | Latest | Model inference |
-| Audio Processing | scipy + soundfile | Latest | Bandpass filter preprocessing |
-| Deployment | Uvicorn | Latest | ASGI server |
+| ASGI Server | Uvicorn | ≥0.30.0 | High-performance async server |
+| HTTP Client | httpx | ≥0.27.0 | Async on_search callback dispatch to BAP |
+| Cryptography | PyNaCl | ≥1.5.0 | Ed25519 signing + BLAKE2b-512 digest (ONDC auth) |
+| Validation | Pydantic v2 | (via pydantic-settings ≥2.4) | ArtisanListingPayload + Beckn envelope models |
+| Config | pydantic-settings | ≥2.4.0 | .env loading with type-safe Settings class |
+| Storage | In-memory dict | — | Active catalog store (pre-loaded Chanderi Silk fallback) |
+| Protocol | Beckn 1.2.0 / ONDC:RET12 | — | BPP adapter: /search → ACK + async on_search callback |
+
+**No ML dependencies** — all AI runs on Kaggle / mobile edge. The BPP backend is intentionally thin (7 packages, boots in 2s).
 

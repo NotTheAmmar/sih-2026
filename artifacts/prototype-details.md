@@ -71,13 +71,17 @@ The prototype isolates and validates the core user ingestion journey—the Magic
 * **Audio Readback Control:** A prominent speaker button that plays a generated voice readout of the listing in the artisan's dialect (e.g., verifying item name, material, and calculated price).
 * **Structured Attribute Chips:** A vertical grid of pictorial chips:
   * **Craft Category:** Identified heritage category (e.g., Chanderi Weave, Terracotta).
+  * **Dimensions / Map:** Extracted physical size (e.g., 6.2 meters).
   * **Detected Materials:** Extracted primary fibers or elements (e.g., Pure Silk, Zari).
   * **Crafting Duration:** Dedication time parsed from voice (e.g., 5 Days).
+  * **Quantity (Stock):** Artisan can step up/down the available pieces.
 * **3-Tier Fair-Pricing Corridor:** A tripartite visual price gauge:
-  * **Floor Price (Base Clearance):** Breakeven threshold covering materials and minimum daily wage.
+  * **Floor Price (Statutory Minimum):** Strict deterministic threshold covering raw materials + (labor days × statutory wage × skill multiplier) + 10% overhead. Manual pricing below this floor is blocked by the UI.
   * **Fair Market Price (Recommended D2C):** Algorithmically optimized price for open commerce.
   * **Premium Price (Institutional/B2B):** Suggested quote for bulk government or corporate procurement.
-* **Primary Action Bar:** A full-width "Phir Se Karein" (Retake Voice/Photo) button in a muted outlined style, allowing the artisan to restart the capture cycle. ONDC publishing integration is deferred to Phase 2.
+* **Primary Action Bar:** 
+  * **Publish to ONDC (Primary Green):** Instantly POSTs the structured catalog via the backend BPP to the ONDC Network. Displays loading spinner, success badge, and triggers Hindi TTS confirmation on success.
+  * **Retake (Secondary Outlined):** Allows the artisan to discard and restart the capture cycle.
 
 ---
 

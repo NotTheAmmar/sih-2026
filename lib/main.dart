@@ -32,7 +32,6 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => CatalogController(
             apiService: apiService,
-            imageService: imageService,
             audioService: audioService,
             storageService: storageService,
           ),

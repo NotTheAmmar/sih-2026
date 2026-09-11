@@ -1,27 +1,25 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../models/catalog_item.dart';
 import '../services/api_service.dart';
 import '../services/audio_service.dart';
-import '../services/image_service.dart';
 import '../services/storage_service.dart';
+import 'pricing_controller.dart';
 
 enum ProcessingStage { notStarted, imageProcessing, voiceProcessing, pricing, done, error }
 
 class CatalogController extends ChangeNotifier {
   final ApiService _apiService;
-  final ImageService _imageService;
   final AudioService _audioService;
   final StorageService _storageService;
 
   CatalogController({
     required ApiService apiService,
-    required ImageService imageService,
     required AudioService audioService,
     required StorageService storageService,
   })  : _apiService = apiService,
-        _imageService = imageService,
         _audioService = audioService,
         _storageService = storageService;
 
@@ -83,6 +81,13 @@ class CatalogController extends ChangeNotifier {
         status: CatalogStatus.draft,
       );
 
+      // Warm the image cache now so the studio photo is ready by the time
+      // the user reaches the catalog screen (avoids visible load flash).
+      if (result.studioImagePath != null &&
+          result.studioImagePath!.startsWith('http')) {
+        _precacheStudioImage(result.studioImagePath!);
+      }
+
       // Persist locally
       await _storageService.saveCatalog(_currentItem!);
 
@@ -122,22 +127,55 @@ class CatalogController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Simulate ONDC publish (Phase 2: wire to Beckn BPP)
-  Future<void> publishToOndc() async {
+  /// Publish to ONDC via the BPP backend.
+  Future<void> publishToOndc(PricingController pricingCtrl) async {
     if (_currentItem == null || _isPublishing) return;
     _isPublishing = true;
+    _publishSuccess = false;
+    _errorMessage = null;
     notifyListeners();
 
-    // Simulate network call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await _apiService.publishToOndc(
+        item: _currentItem!,
+        pricing: pricingCtrl.corridor,
+        availableQuantity: pricingCtrl.availableQuantity,
+      );
 
-    _currentItem = _currentItem!.copyWith(status: CatalogStatus.published);
-    await _storageService.saveCatalog(_currentItem!);
+      if (response['status'] == 'PUBLISHED') {
+        _currentItem = _currentItem!.copyWith(status: CatalogStatus.published);
+        await _storageService.saveCatalog(_currentItem!);
+        _publishSuccess = true;
+        HapticFeedback.heavyImpact();
+
+        // TTS confirmation in Hindi
+        await _audioService.speakText(
+          'आपका उत्पाद ओ.एन.डी.सी. पर प्रकाशित हो गया है।',
+        );
+      } else {
+        _errorMessage = response['message'] ?? 'Publish failed';
+      }
+    } catch (e) {
+      _errorMessage = 'Publish failed: ${e.toString()}';
+    }
 
     _isPublishing = false;
-    _publishSuccess = true;
-    HapticFeedback.heavyImpact();
     notifyListeners();
+  }
+
+  /// Warms the Flutter image cache for [url] in the background.
+  /// Uses [NetworkImage] directly — no BuildContext needed.
+  void _precacheStudioImage(String url) {
+    final provider = NetworkImage(
+      url,
+      headers: const {'bypass-tunnel-reminder': 'true'},
+    );
+    provider.resolve(ImageConfiguration.empty).addListener(
+      ImageStreamListener(
+        (info, _) {}, // success — image is now in cache
+        onError: (e, _) {}, // ignore cache-warm errors silently
+      ),
+    );
   }
 
   void reset() {

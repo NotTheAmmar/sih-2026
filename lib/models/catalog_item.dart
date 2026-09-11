@@ -28,6 +28,9 @@ class CatalogItem {
   // Pricing
   final PricingCorridor? pricing;
 
+  // Inventory
+  final int availableQuantity;
+
   // TTS readback URL/path (from Bhashini or flutter_tts)
   final String? audioReadbackPath;
 
@@ -46,6 +49,7 @@ class CatalogItem {
     this.descriptionHi,
     this.craftAttributes,
     this.pricing,
+    this.availableQuantity = 1,
     this.audioReadbackPath,
     this.status = CatalogStatus.draft,
   });
@@ -62,6 +66,7 @@ class CatalogItem {
     String? descriptionHi,
     CraftAttributes? craftAttributes,
     PricingCorridor? pricing,
+    int? availableQuantity,
     String? audioReadbackPath,
     CatalogStatus? status,
   }) {
@@ -77,6 +82,7 @@ class CatalogItem {
       descriptionHi: descriptionHi ?? this.descriptionHi,
       craftAttributes: craftAttributes ?? this.craftAttributes,
       pricing: pricing ?? this.pricing,
+      availableQuantity: availableQuantity ?? this.availableQuantity,
       audioReadbackPath: audioReadbackPath ?? this.audioReadbackPath,
       status: status ?? this.status,
     );
@@ -94,6 +100,7 @@ class CatalogItem {
         'descriptionHi': descriptionHi,
         'craftAttributes': craftAttributes?.toJson(),
         'pricing': pricing?.toJson(),
+        'availableQuantity': availableQuantity,
         'audioReadbackPath': audioReadbackPath,
         'status': status.name,
       };
@@ -115,6 +122,7 @@ class CatalogItem {
         pricing: json['pricing'] != null
             ? PricingCorridor.fromJson(json['pricing'] as Map<String, dynamic>)
             : null,
+        availableQuantity: json['availableQuantity'] as int? ?? 1,
         audioReadbackPath: json['audioReadbackPath'] as String?,
         status: CatalogStatus.values.byName(
             (json['status'] as String?) ?? CatalogStatus.draft.name),

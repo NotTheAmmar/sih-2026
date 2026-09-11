@@ -4,6 +4,7 @@ class PricingCorridor {
   final int rawMaterialCost; // ₹ — Mraw
   final int laborDays; // Tdays
   final int dailyWageRate; // ₹/day — Wartisan (₹450–600)
+  final double skillMultiplier; // Kskill
   final double overheadPercent; // e.g. 0.10 for 10%
 
   // Computed tiers (set after calculation)
@@ -15,34 +16,48 @@ class PricingCorridor {
     required this.rawMaterialCost,
     required this.laborDays,
     required this.dailyWageRate,
+    this.skillMultiplier = 1.0,
     required this.overheadPercent,
     required this.floorPrice,
     required this.fairPrice,
     required this.premiumPrice,
   });
 
-  /// Factory: compute corridor from inputs using the deterministic formula.
+  /// Factory: compute corridor from inputs using the MoSJE deterministic formula.
   ///
-  /// Cfloor = Mraw + (Tdays × Wartisan) + Ooverhead
-  /// Pfair  = Cfloor × 1.50
-  /// Pprem  = Pfair  × 1.20
+  /// Cfloor = Mraw + (Tdays * Wstatutory * Kskill) + Ooverhead
+  /// Pfair  = Cfloor * 1.50 (Phase 1 fallback)
+  /// Pprem  = Pfair * 1.20
   factory PricingCorridor.compute({
     required int rawMaterialCost,
     required int laborDays,
     int dailyWageRate = AppConstants.defaultDailyWageRate,
+    double skillMultiplier = 1.0,
     double overheadPercent = AppConstants.overheadPercent,
   }) {
-    final laborCost = laborDays * dailyWageRate;
-    final subtotal = rawMaterialCost + laborCost;
-    final overhead = (subtotal * overheadPercent).round();
-    final floor = subtotal + overhead;
-    final fair = (floor * AppConstants.fairPriceMultiplier).round();
-    final premium = (fair * AppConstants.premiumPriceMultiplier).round();
+    // Base Labor = T_days * W_statutory * K_skill
+    final double baseLabor = laborDays * dailyWageRate * skillMultiplier;
+    
+    // Base Cost = M_raw + Base Labor
+    final double baseCost = rawMaterialCost + baseLabor;
+    
+    // Overhead (O_overhead) = 10%
+    final double overhead = baseCost * overheadPercent;
+    
+    // C_floor
+    final int floor = (baseCost + overhead).round();
+    
+    // P_fair (Market-Aware fallback until XGBoost is connected)
+    final int fair = (floor * AppConstants.fairPriceMultiplier).round();
+    
+    // P_prem (1.20 * P_fair)
+    final int premium = (fair * AppConstants.premiumPriceMultiplier).round();
 
     return PricingCorridor(
       rawMaterialCost: rawMaterialCost,
       laborDays: laborDays,
       dailyWageRate: dailyWageRate,
+      skillMultiplier: skillMultiplier,
       overheadPercent: overheadPercent,
       floorPrice: floor,
       fairPrice: fair,
@@ -54,6 +69,7 @@ class PricingCorridor {
     int? rawMaterialCost,
     int? laborDays,
     int? dailyWageRate,
+    double? skillMultiplier,
     double? overheadPercent,
     int? floorPrice,
     int? fairPrice,
@@ -63,6 +79,7 @@ class PricingCorridor {
       rawMaterialCost: rawMaterialCost ?? this.rawMaterialCost,
       laborDays: laborDays ?? this.laborDays,
       dailyWageRate: dailyWageRate ?? this.dailyWageRate,
+      skillMultiplier: skillMultiplier ?? this.skillMultiplier,
       overheadPercent: overheadPercent ?? this.overheadPercent,
       floorPrice: floorPrice ?? this.floorPrice,
       fairPrice: fairPrice ?? this.fairPrice,
@@ -74,6 +91,7 @@ class PricingCorridor {
         'rawMaterialCost': rawMaterialCost,
         'laborDays': laborDays,
         'dailyWageRate': dailyWageRate,
+        'skillMultiplier': skillMultiplier,
         'overheadPercent': overheadPercent,
         'floorPrice': floorPrice,
         'fairPrice': fairPrice,
@@ -85,6 +103,7 @@ class PricingCorridor {
         rawMaterialCost: json['rawMaterialCost'] as int,
         laborDays: json['laborDays'] as int,
         dailyWageRate: json['dailyWageRate'] as int,
+        skillMultiplier: (json['skillMultiplier'] as num?)?.toDouble() ?? 1.0,
         overheadPercent: (json['overheadPercent'] as num).toDouble(),
         floorPrice: json['floorPrice'] as int,
         fairPrice: json['fairPrice'] as int,

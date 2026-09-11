@@ -160,21 +160,28 @@ class _CountdownTimer extends StatelessWidget {
   final int seconds;
   const _CountdownTimer({required this.seconds});
 
+  String _format(int s) {
+    final m = s ~/ 60;
+    final sec = s % 60;
+    return '${m.toString().padLeft(1, '0')}:${sec.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final color = seconds <= 5 ? AppColors.alertRed : AppColors.textPrimary;
+    final color = seconds <= 10 ? AppColors.alertRed : AppColors.textPrimary;
     return Column(
       children: [
         Text(
-          '$seconds',
+          _format(seconds),
           style: AppTextStyles.headlineLarge.copyWith(
             color: color,
             fontSize: 48,
             fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         Text(
-          'seconds remaining',
+          'remaining',
           style: AppTextStyles.caption,
         ),
       ],

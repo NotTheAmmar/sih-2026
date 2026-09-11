@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../config/theme.dart';
 
+/// A stepper row with +/- buttons. Tapping the value label opens a keyboard
+/// dialog so the user can type a number directly.
 class StepperInput extends StatelessWidget {
   final String label;
   final String unit;
@@ -9,6 +11,9 @@ class StepperInput extends StatelessWidget {
   final int step;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
+
+  /// Called when the user types a value directly. Defaults to null (no direct edit).
+  final ValueChanged<int>? onDirectEdit;
 
   const StepperInput({
     super.key,
@@ -18,7 +23,45 @@ class StepperInput extends StatelessWidget {
     required this.onIncrement,
     required this.onDecrement,
     this.step = 1,
+    this.onDirectEdit,
   });
+
+  Future<void> _showEditDialog(BuildContext context) async {
+    final ctrl = TextEditingController(text: value == 0 ? '' : '$value');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(label, style: AppTextStyles.label),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            suffixText: unit,
+            hintText: '0',
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: (v) =>
+              Navigator.of(ctx).pop(int.tryParse(v) ?? 0),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('रद्द / Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.of(ctx).pop(int.tryParse(ctrl.text) ?? 0),
+            child: const Text('ठीक है / OK'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && onDirectEdit != null) {
+      onDirectEdit!(result);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +78,32 @@ class StepperInput extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: AppTextStyles.caption),
-                Text(
-                  '$value $unit',
-                  style: AppTextStyles.subhead,
-                ),
-              ],
+            child: GestureDetector(
+              onTap: onDirectEdit != null
+                  ? () => _showEditDialog(context)
+                  : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: AppTextStyles.caption),
+                  Row(
+                    children: [
+                      Text(
+                        '$value $unit',
+                        style: AppTextStyles.subhead,
+                      ),
+                      if (onDirectEdit != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 14,
+                          color: AppColors.textHint,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           // Decrement

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
@@ -34,9 +35,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
         _seeded = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
+            // Start at 0 so the artisan enters their actual costs
             context.read<PricingController>().seedFromExtracted(
-              rawMaterialCost: item.pricing?.rawMaterialCost ?? 500,
-              laborDays: item.craftAttributes?.laborDays ?? 3,
+              rawMaterialCost: 0,
+              laborDays: 0,
             );
           }
         });
@@ -123,7 +125,31 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           Text(item.titleEn!,
                               style: AppTextStyles.body
                                   .copyWith(color: AppColors.textSecondary)),
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+
+                        // ── Description — full, both languages ──────────
+                        if (item.descriptionHi != null ||
+                            item.descriptionEn != null) ...[
+                          Text('विवरण / Description',
+                              style: AppTextStyles.label),
+                          const SizedBox(height: AppSpacing.sm),
+                          if (item.descriptionHi != null) ...[
+                            Text(
+                              item.descriptionHi!,
+                              style: AppTextStyles.body,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                          if (item.descriptionEn != null) ...[
+                            Text(
+                              item.descriptionEn!,
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.lg),
                         ],
 
                         // Craft attribute chips
@@ -135,6 +161,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               value: attrs.category!,
                             ),
                           const SizedBox(height: AppSpacing.xs),
+                          if (attrs.dimensions != null) ...[
+                            CraftChip(
+                              icon: Icons.straighten_rounded,
+                              label: 'Dimensions / माप',
+                              value: attrs.dimensions!,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                          ],
                           if (attrs.materials.isNotEmpty)
                             CraftChip(
                               icon: Icons.fiber_manual_record_rounded,
@@ -175,6 +209,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               pricingCtrl.incrementRawMaterial(step: 50),
                           onDecrement: () =>
                               pricingCtrl.decrementRawMaterial(step: 50),
+                          onDirectEdit: (v) => pricingCtrl.setRawMaterialCost(v),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        StepperInput(
+                          label: 'Available Quantity / उपलब्ध मात्रा',
+                          unit: 'pcs',
+                          value: pricingCtrl.availableQuantity,
+                          onIncrement: pricingCtrl.incrementQuantity,
+                          onDecrement: pricingCtrl.decrementQuantity,
+                          onDirectEdit: (v) => pricingCtrl.setAvailableQuantity(v),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         StepperInput(
@@ -183,28 +227,153 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           value: pricingCtrl.laborDays,
                           onIncrement: pricingCtrl.incrementLaborDays,
                           onDecrement: pricingCtrl.decrementLaborDays,
+                          onDirectEdit: (v) => pricingCtrl.setLaborDays(v),
                         ),
                         const SizedBox(height: AppSpacing.lg),
 
-                        // ── Price gauge ────────────────────────────────
+                        // ── Price corridor gauge ────────────────────────
                         PriceGauge(
                           floorPrice: pricing.floorPrice,
                           fairPrice: pricing.fairPrice,
                           premiumPrice: pricing.premiumPrice,
                         ),
-                        const SizedBox(height: AppSpacing.xl),
+                        const SizedBox(height: AppSpacing.md),
 
-                        // Description (collapsed preview)
-                        if (item.descriptionHi != null) ...[
-                          Text('विवरण / Description',
-                              style: AppTextStyles.label),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(item.descriptionHi!,
-                              style: AppTextStyles.body,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: AppSpacing.xl),
-                        ],
+                        // ── Final / Selling price (editable) ────────────
+                        GestureDetector(
+                          onTap: () async {
+                            final ctrl = TextEditingController(
+                              text: pricingCtrl.finalPrice == 0
+                                  ? ''
+                                  : '${pricingCtrl.finalPrice}',
+                            );
+                            final result = await showDialog<int>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(
+                                  'अंतिम कीमत / Final Price',
+                                  style: AppTextStyles.label,
+                                ),
+                                content: TextField(
+                                  controller: ctrl,
+                                  autofocus: true,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly
+                                  ],
+                                  decoration: const InputDecoration(
+                                    prefixText: '₹ ',
+                                    hintText: '0',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onSubmitted: (v) => Navigator.of(ctx)
+                                      .pop(int.tryParse(v) ?? 0),
+                                ),
+                                actions: [
+                                  if (pricingCtrl.hasFinalPriceOverride)
+                                    TextButton(
+                                      onPressed: () {
+                                        pricingCtrl.clearFinalPriceOverride();
+                                        Navigator.of(ctx).pop();
+                                      },
+                                      child: const Text('Reset to Auto'),
+                                    ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text('रद्द / Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(ctx).pop(
+                                      int.tryParse(ctrl.text) ?? 0,
+                                    ),
+                                    child: const Text('सेट करें / Set'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (result != null && result > 0) {
+                              final errorMsg = pricingCtrl.setFinalPrice(result);
+                              if (errorMsg != null && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMsg),
+                                    backgroundColor: AppColors.errorRed,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm + 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: pricingCtrl.hasFinalPriceOverride
+                                  ? AppColors.actionGreen.withAlpha(18)
+                                  : AppColors.cardBackground,
+                              borderRadius:
+                                  BorderRadius.circular(AppSpacing.radiusMd),
+                              border: Border.all(
+                                color: pricingCtrl.hasFinalPriceOverride
+                                    ? AppColors.actionGreen
+                                    : AppColors.cardBorder,
+                                width: pricingCtrl.hasFinalPriceOverride ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.sell_rounded,
+                                  color: pricingCtrl.hasFinalPriceOverride
+                                      ? AppColors.actionGreen
+                                      : AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Final Price / अंतिम कीमत',
+                                        style: AppTextStyles.label.copyWith(
+                                          color: pricingCtrl
+                                                  .hasFinalPriceOverride
+                                              ? AppColors.actionGreen
+                                              : AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      Text(
+                                        pricingCtrl.hasFinalPriceOverride
+                                            ? 'Manually set'
+                                            : 'Tap to set selling price',
+                                        style: AppTextStyles.caption,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '₹${pricingCtrl.finalPrice}',
+                                  style: AppTextStyles.priceLarge.copyWith(
+                                    color: pricingCtrl.hasFinalPriceOverride
+                                        ? AppColors.actionGreen
+                                        : AppColors.textHint,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                  color: AppColors.textHint,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
                   ),
@@ -218,29 +387,86 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     AppSpacing.md,
                     AppSpacing.lg,
                   ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        catalogCtrl.reset();
-                        context.read<CaptureController>().retake();
-                        context.read<VoiceController>().reset();
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                            AppRoutes.capture, (r) => false);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize:
-                            const Size(0, AppSpacing.touchTargetMin),
-                        side: const BorderSide(
-                            color: AppColors.textSecondary),
+                  child: Column(
+                    children: [
+                      // Publish Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: (catalogCtrl.isPublishing || catalogCtrl.publishSuccess)
+                              ? null
+                              : () async {
+                                  await catalogCtrl.publishToOndc(pricingCtrl);
+                                  if (catalogCtrl.errorMessage != null && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(catalogCtrl.errorMessage!),
+                                        backgroundColor: AppColors.errorRed,
+                                      ),
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.actionGreen,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, AppSpacing.touchTargetMin),
+                            disabledBackgroundColor: catalogCtrl.publishSuccess 
+                                ? AppColors.actionGreen 
+                                : null,
+                            disabledForegroundColor: Colors.white,
+                          ),
+                          child: catalogCtrl.isPublishing
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : catalogCtrl.publishSuccess
+                                  ? const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.check_circle_rounded),
+                                        SizedBox(width: 8),
+                                        Text('ONDC पर प्रकाशित / Published'),
+                                      ],
+                                    )
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.rocket_launch_rounded),
+                                        SizedBox(width: 8),
+                                        Text('ONDC पर प्रकाशन / Publish to ONDC'),
+                                      ],
+                                    ),
+                        ),
                       ),
-                      child: Column(
-                        children: [
-                          const Text('फिर से करें'),
-                          Text('Retake', style: AppTextStyles.caption),
-                        ],
+                      const SizedBox(height: AppSpacing.sm),
+                      // Retake Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            catalogCtrl.reset();
+                            context.read<CaptureController>().retake();
+                            context.read<VoiceController>().reset();
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                                AppRoutes.capture, (r) => false);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize:
+                                const Size(0, AppSpacing.touchTargetMin),
+                            side: const BorderSide(
+                                color: AppColors.textSecondary),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text('फिर से करें'),
+                              Text('Retake', style: AppTextStyles.caption),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 

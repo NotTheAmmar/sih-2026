@@ -30,12 +30,20 @@ class AppConstants {
   static String get voicePipeline =>
       dotenv.env['VOICE_PIPELINE']?.toLowerCase() ?? 'auto';
 
-  // Backend (Path 1 & 2 — FastAPI)
-  static String get backendUrl =>
-      dotenv.env['BACKEND_URL'] ?? 'http://localhost:8000';
+  // Backend (Path 1 & 2 — Kaggle FastAPI via localtunnel)
+  // ── BPP Backend (ONDC Beckn Provider Platform) ────────────────────
+  static String get bppBackendUrl {
+    final url = dotenv.env['BPP_BACKEND_URL'] ?? 'http://localhost:8000';
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
+
+  static String get backendUrl {
+    final url = dotenv.env['BACKEND_URL'] ?? 'http://localhost:8000';
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
 
   // Audio
-  static const int maxRecordingSeconds = 15;
+  static const int maxRecordingSeconds = 60;
   static const int audioSampleRate = 16000;
   static const double silenceAmplitudeThreshold = -50.0; // dBFS
 

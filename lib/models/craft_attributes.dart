@@ -4,6 +4,7 @@ class CraftAttributes {
   final int? laborDays; // Parsed from voice
   final String? clusterLocation; // e.g. "Chanderi, Madhya Pradesh"
   final String? artisanName;
+  final String? dimensions; // e.g. "6.2 meters"
 
   const CraftAttributes({
     this.category,
@@ -11,6 +12,7 @@ class CraftAttributes {
     this.laborDays,
     this.clusterLocation,
     this.artisanName,
+    this.dimensions,
   });
 
   CraftAttributes copyWith({
@@ -19,6 +21,7 @@ class CraftAttributes {
     int? laborDays,
     String? clusterLocation,
     String? artisanName,
+    String? dimensions,
   }) {
     return CraftAttributes(
       category: category ?? this.category,
@@ -26,6 +29,7 @@ class CraftAttributes {
       laborDays: laborDays ?? this.laborDays,
       clusterLocation: clusterLocation ?? this.clusterLocation,
       artisanName: artisanName ?? this.artisanName,
+      dimensions: dimensions ?? this.dimensions,
     );
   }
 
@@ -35,6 +39,7 @@ class CraftAttributes {
         'laborDays': laborDays,
         'clusterLocation': clusterLocation,
         'artisanName': artisanName,
+        'dimensions': dimensions,
       };
 
   factory CraftAttributes.fromJson(Map<String, dynamic> json) =>
@@ -47,5 +52,6 @@ class CraftAttributes {
         laborDays: json['laborDays'] as int?,
         clusterLocation: json['clusterLocation'] as String?,
         artisanName: json['artisanName'] as String?,
+        dimensions: json['dimensions'] as String?,
       );
 }
