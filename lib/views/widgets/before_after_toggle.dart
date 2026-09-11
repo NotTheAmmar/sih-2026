@@ -66,7 +66,7 @@ class BeforeAfterToggle extends StatelessWidget {
     );
   }
 
-  static const _tunnelHeaders = {'bypass-tunnel-reminder': 'true'};
+  static const _tunnelHeaders = {'ngrok-skip-browser-warning': 'true'};
 
   Widget _buildImage(bool studio) {
     final path = studio ? studioImagePath : rawImagePath;

@@ -135,6 +135,13 @@ class CatalogController extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    if (pricingCtrl.corridor.floorPrice <= 0 || pricingCtrl.corridor.fairPrice <= 0 || pricingCtrl.corridor.premiumPrice <= 0) {
+      _errorMessage = 'मूल्य 0 से अधिक होना चाहिए / Price must be greater than ₹0 before publishing';
+      _isPublishing = false;
+      notifyListeners();
+      return;
+    }
+
     try {
       final response = await _apiService.publishToOndc(
         item: _currentItem!,
@@ -168,7 +175,7 @@ class CatalogController extends ChangeNotifier {
   void _precacheStudioImage(String url) {
     final provider = NetworkImage(
       url,
-      headers: const {'bypass-tunnel-reminder': 'true'},
+      headers: const {'ngrok-skip-browser-warning': 'true'},
     );
     provider.resolve(ImageConfiguration.empty).addListener(
       ImageStreamListener(

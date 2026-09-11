@@ -192,7 +192,11 @@ class _PreviewOverlay extends StatelessWidget {
           // Captured image
           if (ctrl.capturedImagePath != null)
             kIsWeb 
-                ? Image.network(ctrl.capturedImagePath!, fit: BoxFit.cover)
+                ? Image.network(
+                    ctrl.capturedImagePath!, 
+                    fit: BoxFit.cover,
+                    headers: const {'ngrok-skip-browser-warning': 'true'},
+                  )
                 : Image.file(File(ctrl.capturedImagePath!), fit: BoxFit.cover),
 
           // Bottom action row

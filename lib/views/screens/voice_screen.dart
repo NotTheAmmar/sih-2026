@@ -57,6 +57,7 @@ class VoiceScreen extends StatelessWidget {
                               height: 120,
                               width: 120,
                               fit: BoxFit.cover,
+                              headers: const {'ngrok-skip-browser-warning': 'true'},
                             )
                           : Image.file(
                               File(captureCtrl.capturedImagePath!),

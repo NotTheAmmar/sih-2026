@@ -397,7 +397,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(errorMsg),
-                                    backgroundColor: AppColors.errorRed,
+                                    backgroundColor: AppColors.alertRed,
                                   ),
                                 );
                               }
@@ -501,7 +501,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(catalogCtrl.errorMessage!),
-                                        backgroundColor: AppColors.errorRed,
+                                        backgroundColor: AppColors.alertRed,
                                       ),
                                     );
                                   }
