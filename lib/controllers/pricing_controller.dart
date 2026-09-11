@@ -5,6 +5,8 @@ import '../models/pricing_corridor.dart';
 class PricingController extends ChangeNotifier {
   int _rawMaterialCost;
   int _laborDays;
+  int _itemsProduced;
+  int _sellerProposedPrice;
   int _dailyWageRate;
   double _skillMultiplier;
   int _availableQuantity;
@@ -17,11 +19,15 @@ class PricingController extends ChangeNotifier {
   PricingController({
     int initialRawMaterialCost = 0,
     int initialLaborDays = 0,
+    int initialItemsProduced = 1,
+    int initialSellerProposedPrice = 0,
     int dailyWageRate = AppConstants.defaultDailyWageRate,
     double skillMultiplier = 1.0,
     int initialQuantity = 1,
   })  : _rawMaterialCost = initialRawMaterialCost,
         _laborDays = initialLaborDays,
+        _itemsProduced = initialItemsProduced,
+        _sellerProposedPrice = initialSellerProposedPrice,
         _dailyWageRate = dailyWageRate,
         _skillMultiplier = skillMultiplier,
         _availableQuantity = initialQuantity {
@@ -30,6 +36,8 @@ class PricingController extends ChangeNotifier {
 
   int get rawMaterialCost => _rawMaterialCost;
   int get laborDays => _laborDays;
+  int get itemsProduced => _itemsProduced;
+  int get sellerProposedPrice => _sellerProposedPrice;
   int get dailyWageRate => _dailyWageRate;
   double get skillMultiplier => _skillMultiplier;
   int get availableQuantity => _availableQuantity;
@@ -105,11 +113,40 @@ class PricingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Items Produced & Proposed Price ───────────────────────────────────────
+
+  void setItemsProduced(int value) {
+    _itemsProduced = value.clamp(1, 9999);
+    _recalculate();
+    notifyListeners();
+  }
+
+  void incrementItemsProduced() {
+    setItemsProduced(_itemsProduced + 1);
+  }
+
+  void decrementItemsProduced() {
+    setItemsProduced(_itemsProduced - 1);
+  }
+
+  void setSellerProposedPrice(int value) {
+    _sellerProposedPrice = value.clamp(0, 999999);
+    _recalculate();
+    notifyListeners();
+  }
+
   // ── Seed from AI extraction ───────────────────────────────────────────────
 
-  void seedFromExtracted({required int rawMaterialCost, required int laborDays}) {
+  void seedFromExtracted({
+    required int rawMaterialCost, 
+    required int laborDays,
+    required int itemsProduced,
+    required int sellerProposedPrice,
+  }) {
     _rawMaterialCost = rawMaterialCost;
     _laborDays = laborDays;
+    _itemsProduced = itemsProduced > 0 ? itemsProduced : 1;
+    _sellerProposedPrice = sellerProposedPrice;
     _manualFinalPrice = null; // clear any previous manual override
     _recalculate();
     notifyListeners();
@@ -121,6 +158,8 @@ class PricingController extends ChangeNotifier {
     _corridor = PricingCorridor.compute(
       rawMaterialCost: _rawMaterialCost,
       laborDays: _laborDays,
+      itemsProduced: _itemsProduced,
+      sellerProposedPrice: _sellerProposedPrice,
       dailyWageRate: _dailyWageRate,
       skillMultiplier: _skillMultiplier,
     );

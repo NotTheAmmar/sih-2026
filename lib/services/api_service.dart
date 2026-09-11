@@ -395,44 +395,81 @@ class LiveApiService implements ApiService {
     onStageComplete?.call(1);
     onStageComplete?.call(2);
 
-    final materialsList = (j['materials'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
+    String? getTagValue(String groupCode, String code) {
+      final tags = j['tags'] as List?;
+      if (tags == null) return null;
+      for (final tagGroup in tags) {
+        if (tagGroup is Map && tagGroup['code'] == groupCode) {
+          final list = tagGroup['list'] as List?;
+          if (list != null) {
+            for (final item in list) {
+              if (item is Map && item['code'] == code) {
+                return item['value']?.toString();
+              }
+            }
+          }
+        }
+      }
+      return null;
+    }
 
-    final pricingMap = j['pricing'] as Map<String, dynamic>? ?? {};
+    final materialsStr = getTagValue('craft_attributes', 'materials') ?? '';
+    final materialsList = materialsStr
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
-      final rawStudioUrl = j['studio_image_url'] as String?;
-      final fullStudioUrl = rawStudioUrl != null ? '${AppConstants.backendUrl}$rawStudioUrl' : null;
+    final titleEn = j['descriptor']?['name'] as String?;
+    final titleHi = getTagValue('translation_hi', 'name');
+    final descriptionEn = j['descriptor']?['long_desc'] as String?;
+    final descriptionHi = getTagValue('translation_hi', 'long_desc');
+    
+    final laborDays = _parseInt(getTagValue('pricing_inputs', 'labor_days')) ?? 0;
 
-      return CatalogProcessResult(
-        titleEn: j['title_en'] as String?,
-        titleHi: j['title_hi'] as String?,
-        descriptionEn: j['description_en'] as String?,
-        descriptionHi: j['description_hi'] as String?,
-        craftAttributes: CraftAttributes(
-          category: j['craft_category'] as String?,
-          materials: materialsList,
-          laborDays: _parseInt(pricingMap['labor_days']),
-          clusterLocation: j['cluster_location'] as String?,
-        ),
-        pricing: pricingMap.isNotEmpty
-            ? PricingCorridor(
-                rawMaterialCost: _parseInt(pricingMap['raw_material_cost']) ?? 500,
-                laborDays: _parseInt(pricingMap['labor_days']) ?? 3,
-                dailyWageRate:
-                    _parseInt(pricingMap['daily_wage_rate']) ??
-                    AppConstants.defaultDailyWageRate,
-                overheadPercent: (pricingMap['overhead_percent'] as num?)
-                        ?.toDouble() ??
-                    AppConstants.overheadPercent,
-                floorPrice: _parseInt(pricingMap['floor_price']) ?? 0,
-                fairPrice: _parseInt(pricingMap['fair_price']) ?? 0,
-                premiumPrice: _parseInt(pricingMap['premium_price']) ?? 0,
-              )
-            : null,
-        studioImagePath: fullStudioUrl,
-      );
+    final images = j['descriptor']?['images'] as List?;
+    final rawStudioUrl = (images != null && images.isNotEmpty) ? images.first as String? : null;
+    final fullStudioUrl = rawStudioUrl != null ? '${AppConstants.backendUrl}$rawStudioUrl' : null;
+
+    final pricing = PricingCorridor(
+      rawMaterialCost: _parseInt(getTagValue('pricing_inputs', 'raw_material_cost')) ?? 0,
+      laborDays: laborDays,
+      itemsProduced: _parseInt(getTagValue('pricing_inputs', 'items_produced')) ?? 1,
+      sellerProposedPrice: _parseInt(getTagValue('pricing_inputs', 'seller_proposed_price')) ?? 0,
+      dailyWageRate: AppConstants.defaultDailyWageRate,
+      overheadPercent: AppConstants.overheadPercent,
+      floorPrice: _parseInt(j['price']?['value']) ?? 0,
+      fairPrice: 0,
+      premiumPrice: _parseInt(j['price']?['maximum_value']) ?? 0,
+    );
+
+    return CatalogProcessResult(
+      titleEn: titleEn,
+      titleHi: titleHi,
+      descriptionEn: descriptionEn,
+      descriptionHi: descriptionHi,
+      craftAttributes: CraftAttributes(
+        category: getTagValue('craft_attributes', 'category'),
+        materials: materialsList,
+        laborDays: laborDays,
+        clusterLocation: getTagValue('craft_attributes', 'cluster_location'),
+        categoryId: j['category_id'] as String?,
+        fulfillmentId: j['fulfillment_id'] as String?,
+        locationId: j['location_id'] as String?,
+        quantity: j['quantity']?['available']?['count'] as int? ?? 1,
+        timeToShip: j['@ondc/org/time_to_ship'] as String?,
+        returnable: j['@ondc/org/returnable'] as bool? ?? true,
+        cancellable: j['@ondc/org/cancellable'] as bool? ?? true,
+        availableOnCod: j['@ondc/org/available_on_cod'] as bool? ?? true,
+        returnWindow: j['@ondc/org/return_window'] as String?,
+        countryOfOrigin: getTagValue('statutory_info', 'country_of_origin'),
+        netQuantity: getTagValue('statutory_info', 'net_quantity'),
+        genericName: getTagValue('statutory_info', 'generic_name'),
+        artisanName: getTagValue('statutory_info', 'manufacturer_name'),
+      ),
+      pricing: pricing,
+      studioImagePath: fullStudioUrl,
+    );
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -461,26 +498,72 @@ class LiveApiService implements ApiService {
 const String _geminiSystemInstruction = '''
 You are an expert in Indian handicrafts and artisan products.
 
-An artisan has described their handmade product in Hindi or a regional Indian language (possibly code-switched with English). Extract the following structured information from their voice transcript and return ONLY a valid JSON object — no markdown, no explanation.
+An artisan has described their handmade product in Hindi or a regional Indian language (possibly code-switched with English). Extract the following structured information from their voice transcript and return ONLY a valid JSON object matching the ONDC Beckn Item schema — no markdown, no explanation.
 
-JSON schema (all fields optional unless noted):
+JSON schema:
 {
-  "title_en": "string — SEO-friendly English product title, max 80 chars (REQUIRED)",
-  "title_hi": "string — Professional Hindi product title, max 80 chars (REQUIRED)",
-  "description_en": "string — SEO-optimized English description, 150–250 words (REQUIRED)",
-  "description_hi": "string — Professional Hindi description, 100–200 words (REQUIRED)",
-  "craft_category": "string — e.g. Handloom Silk, Terracotta Pottery, Dhokra Metal Craft, Block Print Fabric",
-  "materials": ["array of raw materials mentioned, in English"],
-  "labor_days": integer or null — days taken to make one unit,
-  "raw_material_cost_inr": integer or null — cost of raw materials in Indian Rupees,
-  "cluster_location": "string — city/district and state if mentioned, e.g. Chanderi, Madhya Pradesh"
+  "id": "item_generated",
+  "category_id": "RET16",
+  "fulfillment_id": "F1",
+  "location_id": "L1",
+  "descriptor": {
+    "name": "string — SEO-friendly English product title, max 80 chars",
+    "short_desc": "string — short description",
+    "long_desc": "string — SEO-optimized English description, 150–250 words"
+  },
+  "price": {
+    "currency": "INR",
+    "value": "0",
+    "maximum_value": "0"
+  },
+  "quantity": {
+    "available": {
+      "count": 1
+    }
+  },
+  "@ondc/org/time_to_ship": "PT48H",
+  "@ondc/org/returnable": true,
+  "@ondc/org/cancellable": true,
+  "@ondc/org/available_on_cod": true,
+  "@ondc/org/return_window": "P7D",
+  "tags": [
+    {
+      "code": "translation_hi",
+      "list": [
+        { "code": "name", "value": "Hindi product title" },
+        { "code": "long_desc", "value": "Hindi description" }
+      ]
+    },
+    {
+      "code": "craft_attributes",
+      "list": [
+        { "code": "category", "value": "e.g. Terracotta Pottery" },
+        { "code": "materials", "value": "comma separated raw materials in English" },
+        { "code": "cluster_location", "value": "city/district if mentioned" }
+      ]
+    },
+    {
+      "code": "pricing_inputs",
+      "list": [
+        { "code": "raw_material_cost", "value": "integer or 0 if missing" },
+        { "code": "labor_days", "value": "integer or 0 if missing" },
+        { "code": "items_produced", "value": "integer or 1 if missing" },
+        { "code": "seller_proposed_price", "value": "integer or 0 if missing" }
+      ]
+    },
+    {
+      "code": "statutory_info",
+      "list": [
+        { "code": "country_of_origin", "value": "IND" },
+        { "code": "manufacturer_name", "value": "Artisan or brand name, else Unknown" },
+        { "code": "net_quantity", "value": "e.g. 1 unit" },
+        { "code": "generic_name", "value": "Commodity name" }
+      ]
+    }
+  ]
 }
 
 Rules:
-- If the artisan mentions a price, that is likely raw_material_cost_inr (not the selling price).
-- Convert all material names to standard English equivalents (e.g. "resham" → "silk thread").
-- If labor_days or raw_material_cost_inr are not mentioned, set them to null.
-- Descriptions must be written in an e-commerce catalog tone — professional, evocative, factual.
-- Hindi text must use Devanagari script.
+- If the artisan mentions a price, it is likely raw_material_cost (not selling price) unless they say "I want to sell for X" (which is seller_proposed_price).
 - Return ONLY the JSON object. No markdown fences.
 ''';

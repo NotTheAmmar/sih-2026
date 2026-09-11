@@ -37,8 +37,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
           if (mounted) {
             // Start at 0 so the artisan enters their actual costs
             context.read<PricingController>().seedFromExtracted(
-              rawMaterialCost: 0,
-              laborDays: 0,
+              rawMaterialCost: item.pricing?.rawMaterialCost ?? 0,
+              laborDays: item.pricing?.laborDays ?? 0,
+              itemsProduced: item.pricing?.itemsProduced ?? 1,
+              sellerProposedPrice: item.pricing?.sellerProposedPrice ?? 0,
             );
           }
         });
@@ -194,6 +196,49 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                           ],
                           const SizedBox(height: AppSpacing.lg),
+
+                          // ── ONDC Fulfillment & Logistics ────────────────
+                          Text('ONDC Logistics & Statutory', style: AppTextStyles.label),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: [
+                              if (attrs.timeToShip != null)
+                                CraftChip(
+                                  icon: Icons.local_shipping_rounded,
+                                  label: 'Ready to Ship',
+                                  value: attrs.timeToShip!.replaceAll('PT', '').replaceAll('H', ' Hours'),
+                                  color: AppColors.actionGreen,
+                                ),
+                              if (attrs.returnable)
+                                CraftChip(
+                                  icon: Icons.assignment_return_rounded,
+                                  label: 'Returns',
+                                  value: attrs.returnWindow?.replaceAll('P', '').replaceAll('D', ' Days') ?? 'Yes',
+                                  color: AppColors.actionGreen,
+                                ),
+                              if (attrs.quantity > 0)
+                                CraftChip(
+                                  icon: Icons.inventory_2_rounded,
+                                  label: 'In Stock',
+                                  value: '${attrs.quantity} units',
+                                ),
+                              if (attrs.countryOfOrigin != null)
+                                CraftChip(
+                                  icon: Icons.public_rounded,
+                                  label: 'Origin',
+                                  value: attrs.countryOfOrigin!,
+                                ),
+                              if (attrs.genericName != null)
+                                CraftChip(
+                                  icon: Icons.label_rounded,
+                                  label: 'Commodity',
+                                  value: attrs.genericName!,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
                         ],
 
                         // ── Pricing adjustment inputs ──────────────────
@@ -229,6 +274,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           onDecrement: pricingCtrl.decrementLaborDays,
                           onDirectEdit: (v) => pricingCtrl.setLaborDays(v),
                         ),
+                        const SizedBox(height: AppSpacing.sm),
+                        StepperInput(
+                          label: 'Items in Set / कुल मात्रा',
+                          unit: 'items',
+                          value: pricingCtrl.itemsProduced,
+                          onIncrement: pricingCtrl.incrementItemsProduced,
+                          onDecrement: pricingCtrl.decrementItemsProduced,
+                        ),
                         const SizedBox(height: AppSpacing.lg),
 
                         // ── Price corridor gauge ────────────────────────
@@ -238,6 +291,53 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           premiumPrice: pricing.premiumPrice,
                         ),
                         const SizedBox(height: AppSpacing.md),
+                        if (pricingCtrl.sellerProposedPrice > 0)
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                  ? AppColors.priceFloor.withOpacity(0.1)
+                                  : AppColors.actionGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                    ? AppColors.priceFloor
+                                    : AppColors.actionGreen,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                  color: pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                      ? AppColors.priceFloor
+                                      : AppColors.actionGreen,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '⚡ ONDC Market Comparison',
+                                        style: AppTextStyles.label,
+                                      ),
+                                      Text(
+                                        pricingCtrl.sellerProposedPrice < pricing.floorPrice
+                                            ? 'Your price (₹${pricingCtrl.sellerProposedPrice}) is below market floor! You may be underpricing your work.'
+                                            : 'Your price (₹${pricingCtrl.sellerProposedPrice}) is highly competitive in the current ONDC market.',
+                                        style: AppTextStyles.caption,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.xl),
+
 
                         // ── Final / Selling price (editable) ────────────
                         GestureDetector(
