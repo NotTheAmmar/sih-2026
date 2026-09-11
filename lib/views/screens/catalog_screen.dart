@@ -162,6 +162,49 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                           ],
                           const SizedBox(height: AppSpacing.lg),
+
+                          // ── ONDC Fulfillment & Logistics ────────────────
+                          Text('ONDC Logistics & Statutory', style: AppTextStyles.label),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: [
+                              if (attrs.timeToShip != null)
+                                CraftChip(
+                                  icon: Icons.local_shipping_rounded,
+                                  label: 'Ready to Ship',
+                                  value: attrs.timeToShip!.replaceAll('PT', '').replaceAll('H', ' Hours'),
+                                  color: AppColors.actionGreen,
+                                ),
+                              if (attrs.returnable)
+                                CraftChip(
+                                  icon: Icons.assignment_return_rounded,
+                                  label: 'Returns',
+                                  value: attrs.returnWindow?.replaceAll('P', '').replaceAll('D', ' Days') ?? 'Yes',
+                                  color: AppColors.actionGreen,
+                                ),
+                              if (attrs.quantity > 0)
+                                CraftChip(
+                                  icon: Icons.inventory_2_rounded,
+                                  label: 'In Stock',
+                                  value: '${attrs.quantity} units',
+                                ),
+                              if (attrs.countryOfOrigin != null)
+                                CraftChip(
+                                  icon: Icons.public_rounded,
+                                  label: 'Origin',
+                                  value: attrs.countryOfOrigin!,
+                                ),
+                              if (attrs.genericName != null)
+                                CraftChip(
+                                  icon: Icons.label_rounded,
+                                  label: 'Commodity',
+                                  value: attrs.genericName!,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
                         ],
 
                         // ── Pricing adjustment inputs ──────────────────

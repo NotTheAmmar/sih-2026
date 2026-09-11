@@ -1,9 +1,25 @@
 class CraftAttributes {
-  final String? category; // e.g. "Handloom Silk Sarees"
-  final List<String> materials; // e.g. ["Pure Mulberry Silk", "Gold Zari"]
-  final int? laborDays; // Parsed from voice
-  final String? clusterLocation; // e.g. "Chanderi, Madhya Pradesh"
+  final String? category;
+  final List<String> materials;
+  final int? laborDays;
+  final String? clusterLocation;
   final String? artisanName;
+
+  // ONDC Mandatory Critical
+  final String? categoryId;
+  final String? fulfillmentId;
+  final String? locationId;
+  final int quantity;
+  final String? timeToShip;
+  final bool returnable;
+  final bool cancellable;
+  final bool availableOnCod;
+  final String? returnWindow;
+
+  // ONDC Mandatory Informational
+  final String? countryOfOrigin;
+  final String? netQuantity;
+  final String? genericName;
 
   const CraftAttributes({
     this.category,
@@ -11,6 +27,18 @@ class CraftAttributes {
     this.laborDays,
     this.clusterLocation,
     this.artisanName,
+    this.categoryId,
+    this.fulfillmentId,
+    this.locationId,
+    this.quantity = 1,
+    this.timeToShip,
+    this.returnable = true,
+    this.cancellable = true,
+    this.availableOnCod = true,
+    this.returnWindow,
+    this.countryOfOrigin,
+    this.netQuantity,
+    this.genericName,
   });
 
   CraftAttributes copyWith({
@@ -19,6 +47,18 @@ class CraftAttributes {
     int? laborDays,
     String? clusterLocation,
     String? artisanName,
+    String? categoryId,
+    String? fulfillmentId,
+    String? locationId,
+    int? quantity,
+    String? timeToShip,
+    bool? returnable,
+    bool? cancellable,
+    bool? availableOnCod,
+    String? returnWindow,
+    String? countryOfOrigin,
+    String? netQuantity,
+    String? genericName,
   }) {
     return CraftAttributes(
       category: category ?? this.category,
@@ -26,6 +66,18 @@ class CraftAttributes {
       laborDays: laborDays ?? this.laborDays,
       clusterLocation: clusterLocation ?? this.clusterLocation,
       artisanName: artisanName ?? this.artisanName,
+      categoryId: categoryId ?? this.categoryId,
+      fulfillmentId: fulfillmentId ?? this.fulfillmentId,
+      locationId: locationId ?? this.locationId,
+      quantity: quantity ?? this.quantity,
+      timeToShip: timeToShip ?? this.timeToShip,
+      returnable: returnable ?? this.returnable,
+      cancellable: cancellable ?? this.cancellable,
+      availableOnCod: availableOnCod ?? this.availableOnCod,
+      returnWindow: returnWindow ?? this.returnWindow,
+      countryOfOrigin: countryOfOrigin ?? this.countryOfOrigin,
+      netQuantity: netQuantity ?? this.netQuantity,
+      genericName: genericName ?? this.genericName,
     );
   }
 
@@ -35,6 +87,18 @@ class CraftAttributes {
         'laborDays': laborDays,
         'clusterLocation': clusterLocation,
         'artisanName': artisanName,
+        'categoryId': categoryId,
+        'fulfillmentId': fulfillmentId,
+        'locationId': locationId,
+        'quantity': quantity,
+        'timeToShip': timeToShip,
+        'returnable': returnable,
+        'cancellable': cancellable,
+        'availableOnCod': availableOnCod,
+        'returnWindow': returnWindow,
+        'countryOfOrigin': countryOfOrigin,
+        'netQuantity': netQuantity,
+        'genericName': genericName,
       };
 
   factory CraftAttributes.fromJson(Map<String, dynamic> json) =>
@@ -47,5 +111,17 @@ class CraftAttributes {
         laborDays: json['laborDays'] as int?,
         clusterLocation: json['clusterLocation'] as String?,
         artisanName: json['artisanName'] as String?,
+        categoryId: json['categoryId'] as String?,
+        fulfillmentId: json['fulfillmentId'] as String?,
+        locationId: json['locationId'] as String?,
+        quantity: json['quantity'] as int? ?? 1,
+        timeToShip: json['timeToShip'] as String?,
+        returnable: json['returnable'] as bool? ?? true,
+        cancellable: json['cancellable'] as bool? ?? true,
+        availableOnCod: json['availableOnCod'] as bool? ?? true,
+        returnWindow: json['returnWindow'] as String?,
+        countryOfOrigin: json['countryOfOrigin'] as String?,
+        netQuantity: json['netQuantity'] as String?,
+        genericName: json['genericName'] as String?,
       );
 }

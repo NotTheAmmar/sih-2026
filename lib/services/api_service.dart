@@ -392,6 +392,19 @@ class LiveApiService implements ApiService {
         materials: materialsList,
         laborDays: laborDays,
         clusterLocation: getTagValue('craft_attributes', 'cluster_location'),
+        categoryId: j['category_id'] as String?,
+        fulfillmentId: j['fulfillment_id'] as String?,
+        locationId: j['location_id'] as String?,
+        quantity: j['quantity']?['available']?['count'] as int? ?? 1,
+        timeToShip: j['@ondc/org/time_to_ship'] as String?,
+        returnable: j['@ondc/org/returnable'] as bool? ?? true,
+        cancellable: j['@ondc/org/cancellable'] as bool? ?? true,
+        availableOnCod: j['@ondc/org/available_on_cod'] as bool? ?? true,
+        returnWindow: j['@ondc/org/return_window'] as String?,
+        countryOfOrigin: getTagValue('statutory_info', 'country_of_origin'),
+        netQuantity: getTagValue('statutory_info', 'net_quantity'),
+        genericName: getTagValue('statutory_info', 'generic_name'),
+        artisanName: getTagValue('statutory_info', 'manufacturer_name'),
       ),
       pricing: pricing,
       studioImagePath: fullStudioUrl,
@@ -429,6 +442,9 @@ An artisan has described their handmade product in Hindi or a regional Indian la
 JSON schema:
 {
   "id": "item_generated",
+  "category_id": "RET16",
+  "fulfillment_id": "F1",
+  "location_id": "L1",
   "descriptor": {
     "name": "string — SEO-friendly English product title, max 80 chars",
     "short_desc": "string — short description",
@@ -439,6 +455,16 @@ JSON schema:
     "value": "0",
     "maximum_value": "0"
   },
+  "quantity": {
+    "available": {
+      "count": 1
+    }
+  },
+  "@ondc/org/time_to_ship": "PT48H",
+  "@ondc/org/returnable": true,
+  "@ondc/org/cancellable": true,
+  "@ondc/org/available_on_cod": true,
+  "@ondc/org/return_window": "P7D",
   "tags": [
     {
       "code": "translation_hi",
@@ -462,6 +488,15 @@ JSON schema:
         { "code": "labor_days", "value": "integer or 0 if missing" },
         { "code": "items_produced", "value": "integer or 1 if missing" },
         { "code": "seller_proposed_price", "value": "integer or 0 if missing" }
+      ]
+    },
+    {
+      "code": "statutory_info",
+      "list": [
+        { "code": "country_of_origin", "value": "IND" },
+        { "code": "manufacturer_name", "value": "Artisan or brand name, else Unknown" },
+        { "code": "net_quantity", "value": "e.g. 1 unit" },
+        { "code": "generic_name", "value": "Commodity name" }
       ]
     }
   ]
